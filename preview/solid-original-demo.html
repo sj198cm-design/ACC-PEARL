@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solid Inventory</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family     : 'Segoe UI', Arial, sans-serif;
+      background      : #F0F4F8;
+      color           : #1C2833;
+      min-height      : 100vh;
+    }
+
+    /* HEADER */
+    .app-header {
+      background  : linear-gradient(135deg, #1A3A5C, #0E6655);
+      color       : white;
+      padding     : 16px 20px 12px;
+      text-align  : center;
+      position    : sticky;
+      top         : 0;
+      z-index     : 100;
+      box-shadow  : 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .app-header h1 { font-size: 1.2rem; font-weight: 700; }
+    .app-header p  { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+
+    /* SCREENS */
+    .screen { display: none; padding: 16px; animation: fadeIn 0.3s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position        : fixed;
+      bottom          : 0;
+      left            : 0;
+      right           : 0;
+      background      : white;
+      display         : flex;
+      border-top      : 2px solid #E0E0E0;
+      z-index         : 100;
+      box-shadow      : 0 -2px 10px rgba(0,0,0,0.08);
+    }
+    .nav-item {
+      flex        : 1;
+      padding     : 10px 4px 8px;
+      text-align  : center;
+      cursor      : pointer;
+      transition  : background 0.15s;
+      border      : none;
+      background  : none;
+    }
+    .nav-item:active   { background: #F0F4F8; }
+    .nav-item .nav-icon { font-size: 1.4rem; display: block; }
+    .nav-item .nav-label {
+      font-size   : 0.62rem;
+      font-weight : 600;
+      color       : #888;
+      margin-top  : 2px;
+      display     : block;
+    }
+    .nav-item.active .nav-label { color: #1A3A5C; }
+
+    /* Page padding for bottom nav */
+    .screen { padding-bottom: 80px; }
+
+    /* HOME CARDS */
+    .home-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 12px;
+      margin-top            : 14px;
+    }
+    .home-card {
+      background    : white;
+      border-radius : 14px;
+      padding       : 20px 12px;
+      text-align    : center;
+      cursor        : pointer;
+      box-shadow    : 0 2px 8px rgba(0,0,0,0.07);
+      border        : 2px solid transparent;
+      transition    : transform 0.15s;
+    }
+    .home-card:active { transform: scale(0.96); }
+    .home-card .icon  { font-size: 1.9rem; margin-bottom: 7px; }
+    .home-card h3     { font-size: 0.83rem; font-weight: 700; }
+    .home-card p      { font-size: 0.7rem; color: #888; margin-top: 3px; }
+    .card-green  { border-color: #1E8449; }
+    .card-blue   { border-color: #1A3A5C; }
+    .card-purple { border-color: #4A235A; }
+    .card-red    { border-color: #C0392B; }
+
+    /* DASHBOARD */
+    .dashboard-section {
+      margin-top    : 18px;
+      background    : white;
+      border-radius : 14px;
+      padding       : 14px;
+      box-shadow    : 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .dashboard-section h3 {
+      font-size     : 0.82rem;
+      color         : #1A3A5C;
+      font-weight   : 700;
+      margin-bottom : 12px;
+      display       : flex;
+      align-items   : center;
+      gap           : 6px;
+    }
+    .dash-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 8px;
+    }
+    .dash-tile {
+      border-radius : 10px;
+      padding       : 11px 10px;
+    }
+    .dash-tile .d-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+    .dash-tile .d-value { font-size: 1rem; font-weight: 700; margin-top: 3px; }
+    .d-green  { background: #D5F5E3; }
+    .d-green  .d-label, .d-green  .d-value { color: #1E8449; }
+    .d-red    { background: #FADBD8; }
+    .d-red    .d-label, .d-red    .d-value { color: #C0392B; }
+    .d-blue   { background: #D6EAF8; }
+    .d-blue   .d-label, .d-blue   .d-value { color: #1A3A5C; }
+    .d-gold   { background: #F9E79F; }
+    .d-gold   .d-label, .d-gold   .d-value { color: #9A7D0A; }
+    .d-purple { background: #E8DAEF; }
+    .d-purple .d-label, .d-purple .d-value { color: #4A235A; }
+    .d-teal   { background: #D1F2EB; }
+    .d-teal   .d-label, .d-teal   .d-value { color: #0E6655; }
+
+    /* REFRESH BTN */
+    .refresh-btn {
+      margin-left   : auto;
+      background    : #1A3A5C;
+      color         : white;
+      border        : none;
+      border-radius : 6px;
+      padding       : 4px 10px;
+      font-size     : 0.72rem;
+      cursor        : pointer;
+    }
+
+    /* FORM */
+    .form-header {
+      display        : flex;
+      align-items    : center;
+      gap            : 10px;
+      margin-bottom  : 18px;
+      padding-bottom : 12px;
+      border-bottom  : 2px solid #E0E0E0;
+    }
+    .back-btn {
+      background    : #1A3A5C;
+      color         : white;
+      border        : none;
+      border-radius : 8px;
+      padding       : 8px 12px;
+      font-size     : 0.85rem;
+      cursor        : pointer;
+    }
+    .form-header h2 { font-size: 1rem; font-weight: 700; color: #1A3A5C; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display        : block;
+      font-size      : 0.77rem;
+      font-weight    : 600;
+      color          : #555;
+      margin-bottom  : 5px;
+      text-transform : uppercase;
+      letter-spacing : 0.3px;
+    }
+    .form-group input,
+    .form-group select {
+      width         : 100%;
+      padding       : 12px 14px;
+      border        : 2px solid #E0E0E0;
+      border-radius : 10px;
+      font-size     : 1rem;
+      color         : #1C2833;
+      background    : white;
+      transition    : border-color 0.2s;
+      appearance    : none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { outline: none; border-color: #1A3A5C; }
+
+    /* CREDIT SECTION */
+    .credit-section {
+      background    : #FADBD8;
+      border        : 2px solid #C0392B;
+      border-radius : 12px;
+      padding       : 14px;
+      margin-bottom : 14px;
+      display       : none;
+    }
+    .credit-section.visible { display: block; }
+    .credit-section h4 {
+      color         : #C0392B;
+      font-size     : 0.85rem;
+      font-weight   : 700;
+      margin-bottom : 12px;
+    }
+
+    /* INFO CARD */
+    .info-card {
+      background    : #EAF4FB;
+      border        : 2px solid #AED6F1;
+      border-radius : 10px;
+      padding       : 11px 13px;
+      margin-bottom : 14px;
+      font-size     : 0.83rem;
+      color         : #1A5276;
+    }
+
+    /* DATE BADGE */
+    .date-badge {
+      background    : #1A3A5C;
+      color         : white;
+      padding       : 7px 14px;
+      border-radius : 8px;
+      font-size     : 0.78rem;
+      font-weight   : 600;
+      text-align    : center;
+      margin-bottom : 14px;
+    }
+
+    /* SUBMIT */
+    .submit-btn {
+      width         : 100%;
+      padding       : 15px;
+      background    : linear-gradient(135deg, #1A3A5C, #0E6655);
+      color         : white;
+      border        : none;
+      border-radius : 12px;
+      font-size     : 1rem;
+      font-weight   : 700;
+      cursor        : pointer;
+      margin-top    : 6px;
+      transition    : opacity 0.2s;
+    }
+    .submit-btn:active   { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* SPINNER */
+    .spinner { display: none; text-align: center; padding: 14px; color: #888; font-size: 0.88rem; }
+    .spinner.show { display: block; }
+
+    /* TOAST */
+    .toast {
+      position      : fixed;
+      bottom        : 72px;
+      left          : 50%;
+      transform     : translateX(-50%);
+      background    : #1E8449;
+      color         : white;
+      padding       : 13px 20px;
+      border-radius : 12px;
+      font-size     : 0.88rem;
+      font-weight   : 600;
+      z-index       : 999;
+      box-shadow    : 0 4px 16px rgba(0,0,0,0.2);
+      opacity       : 0;
+      transition    : opacity 0.3s;
+      text-align    : center;
+      max-width     : 88%;
+      pointer-events: none;
+    }
+    .toast.show  { opacity: 1; }
+    .toast.error { background: #C0392B; }
+
+    /* PAYMENT CARD */
+    .pay-card {
+      background    : white;
+      border-radius : 12px;
+      padding       : 14px;
+      margin-bottom : 14px;
+      box-shadow    : 0 2px 8px rgba(0,0,0,0.07);
+      border        : 2px solid #E0E0E0;
+      display       : none;
+    }
+    .pay-card.visible { display: block; }
+    .pay-grid {
+      display               : grid;
+      grid-template-columns : 1fr 1fr;
+      gap                   : 10px;
+    }
+    .pay-field-label { font-size: 0.67rem; color: #888; font-weight: 600; text-transform: uppercase; }
+    .pay-field-value { font-weight: 700; color: #1C2833; font-size: 0.92rem; margin-top: 2px; }
+    .pay-field-value.red { color: #C0392B; }
+
+    /* BALANCE BOX */
+    .balance-box {
+      background    : #F9E79F;
+      border        : 2px solid #9A7D0A;
+      border-radius : 12px;
+      padding       : 13px;
+      margin-bottom : 14px;
+      display       : none;
+    }
+    .balance-box .bal-label { font-size: 0.78rem; font-weight: 700; color: #9A7D0A; margin-bottom: 3px; }
+    .balance-box .bal-value { font-size: 1.5rem; font-weight: 700; color: #9A7D0A; }
+    .balance-box .bal-sub   { font-size: 0.78rem; color: #555; margin-top: 3px; }
+
+    /* LOADING OVERLAY */
+    .loading-overlay {
+      display        : none;
+      text-align     : center;
+      padding        : 30px 20px;
+      color          : #888;
+    }
+    .loading-overlay.show { display: block; }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <h1>📦 Solid Inventory</h1>
+    <p id="headerDate"></p>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  HOME — Quick Entry + Dashboard           -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen active" id="screen-home">
+
+    <div class="date-badge" id="homeDateBadge"></div>
+
+    <!-- Quick Entry Cards -->
+    <div class="home-grid">
+      <div class="home-card card-green" onclick="showScreen('screen-product')">
+        <div class="icon">📦</div>
+        <h3>New Product</h3>
+        <p>Add to Master Data</p>
+      </div>
+      <div class="home-card card-blue" onclick="showScreen('screen-opening')">
+        <div class="icon">📥</div>
+        <h3>Opening Stock</h3>
+        <p>Start of day</p>
+      </div>
+      <div class="home-card card-purple" onclick="showScreen('screen-activity')">
+        <div class="icon">⚡</div>
+        <h3>Transaction</h3>
+        <p>Sales & Purchases</p>
+      </div>
+      <div class="home-card card-red" onclick="showScreen('screen-payment')">
+        <div class="icon">💳</div>
+        <h3>Payment</h3>
+        <p>Collect credit</p>
+      </div>
+    </div>
+
+    <!-- Dashboard from Financial_Dashboard sheet -->
+    <div class="dashboard-section">
+      <h3>
+        💰 REVENUE
+        <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
+      </h3>
+      <div class="loading-overlay show" id="dash-loading">⏳ Loading from sheet...</div>
+      <div id="dash-content" style="display:none;">
+        <div class="dash-grid">
+          <div class="dash-tile d-green">
+            <div class="d-label">Cash Sales</div>
+            <div class="d-value" id="d-cash">₦0</div>
+          </div>
+          <div class="dash-tile d-red">
+            <div class="d-label">Credit Sales</div>
+            <div class="d-value" id="d-credit">₦0</div>
+          </div>
+          <div class="dash-tile d-gold">
+            <div class="d-label">Total Revenue</div>
+            <div class="d-value" id="d-revenue">₦0</div>
+          </div>
+          <div class="dash-tile d-teal">
+            <div class="d-label">Gross Profit</div>
+            <div class="d-value" id="d-profit">₦0</div>
+          </div>
+          <div class="dash-tile d-blue">
+            <div class="d-label">COGS</div>
+            <div class="d-value" id="d-cogs">₦0</div>
+          </div>
+          <div class="dash-tile d-purple">
+            <div class="d-label">Profit Margin</div>
+            <div class="d-value" id="d-margin">0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-section" style="margin-top:12px;">
+      <h3>📦 INVENTORY</h3>
+      <div class="dash-grid">
+        <div class="dash-tile d-blue">
+          <div class="d-label">Opening Stock</div>
+          <div class="d-value" id="d-opening">₦0</div>
+        </div>
+        <div class="dash-tile d-green">
+          <div class="d-label">Closing Stock</div>
+          <div class="d-value" id="d-closing">₦0</div>
+        </div>
+        <div class="dash-tile d-gold">
+          <div class="d-label">Stock Change</div>
+          <div class="d-value" id="d-change">₦0</div>
+        </div>
+        <div class="dash-tile d-teal">
+          <div class="d-label">Units Sold</div>
+          <div class="d-value" id="d-units">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-section" style="margin-top:12px;">
+      <h3>⚖️ WORKING CAPITAL</h3>
+      <div class="dash-grid">
+        <div class="dash-tile d-red">
+          <div class="d-label">Receivables</div>
+          <div class="d-value" id="d-receivables">₦0</div>
+        </div>
+        <div class="dash-tile d-blue">
+          <div class="d-label">Current Assets</div>
+          <div class="d-value" id="d-assets">₦0</div>
+        </div>
+        <div class="dash-tile d-purple">
+          <div class="d-label">Net Working Capital</div>
+          <div class="d-value" id="d-wc">₦0</div>
+        </div>
+        <div class="dash-tile d-teal">
+          <div class="d-label">Products Tracked</div>
+          <div class="d-value" id="d-products">0</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  NEW PRODUCT                              -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-product">
+    <div class="form-header">
+      <button class="back-btn" onclick="showScreen('screen-home')">← Back</button>
+      <h2>📦 New Product</h2>
+    </div>
+    <div class="info-card">
+      🔵 Product ID is auto-generated by the sheet formula
+    </div>
+
+    <div class="form-group">
+      <label>Product Name *</label>
+      <input type="text" id="prod-name" placeholder="e.g. Dangote Cement 50kg" />
+    </div>
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="prod-category">
+        <option value="">-- Select Category --</option>
+        <option>General</option>
+        <option>Food</option>
+        <option>Beverage</option>
+        <option>Electronics</option>
+        <option>Clothing</option>
+        <option>Stationery</option>
+        <option>Raw Material</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Unit of Measurement *</label>
+      <select id="prod-unit">
+        <option value="">-- Select Unit --</option>
+        <option>Pieces</option>
+        <option>kg</option>
+        <option>Litres</option>
+        <option>Cartons</option>
+        <option>Packs</option>
+        <option>Bags</option>
+        <option>Bottles</option>
+        <option>Dozen</option>
+        <option>Metres</option>
+        <option>Units</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Cost Price (₦) *</label>
+      <input type="number" id="prod-cost" placeholder="e.g. 3500" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Selling Price (₦) *</label>
+      <input type="number" id="prod-selling" placeholder="e.g. 4500" min="0" />
+    </div>
+
+    <div class="spinner" id="prod-spinner">⏳ Saving product...</div>
+    <button class="submit-btn" id="prod-submit" onclick="submitProduct()">
+      ➕ Add Product
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  OPENING STOCK                            -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-opening">
+    <div class="form-header">
+      <button class="back-btn" onclick="showScreen('screen-home')">← Back</button>
+      <h2>📥 Opening Stock</h2>
+    </div>
+    <div class="date-badge" id="openingDateBadge"></div>
+    <div class="info-card">
+      🔵 Only Product ID, Opening Qty and Received Qty are needed —
+      the sheet calculates everything else
+    </div>
+
+    <div class="form-group">
+      <label>Product *</label>
+      <select id="open-product">
+        <option value="">-- Select Product --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Opening Stock B/F (Units) *</label>
+      <input type="number" id="open-qty"
+             placeholder="Units carried forward from yesterday" min="0" />
+    </div>
+    <div class="form-group">
+      <label>New Stock Received (Units)</label>
+      <input type="number" id="open-received"
+             placeholder="New stock purchased today (0 if none)" min="0" />
+    </div>
+
+    <div class="spinner" id="open-spinner">⏳ Recording opening stock...</div>
+    <button class="submit-btn" id="open-submit" onclick="submitOpeningStock()">
+      📥 Record Opening Stock
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  DAILY ACTIVITY                           -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-activity">
+    <div class="form-header">
+      <button class="back-btn" onclick="showScreen('screen-home')">← Back</button>
+      <h2>⚡ Daily Activity</h2>
+    </div>
+    <div class="date-badge" id="activityDateBadge"></div>
+    <div class="info-card">
+      🔵 Select Transaction Type and Product — the sheet handles
+      all price and total calculations
+    </div>
+
+    <div class="form-group">
+      <label>Transaction Type *</label>
+      <select id="act-type" onchange="handleTransactionType()">
+        <option value="">-- Select Type --</option>
+        <option value="Cash Sales">Cash Sales</option>
+        <option value="Credit Sales">Credit Sales</option>
+        <option value="Stock Purchase">Stock Purchase</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Product *</label>
+      <select id="act-product">
+        <option value="">-- Select Product --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Quantity *</label>
+      <input type="number" id="act-qty" placeholder="Number of units" min="1" />
+    </div>
+
+    <!-- CREDIT DETAILS -->
+    <div class="credit-section" id="credit-section">
+      <h4>🔴 CREDIT SALE DETAILS</h4>
+      <div class="form-group">
+        <label>Customer Name *</label>
+        <input type="text" id="act-customer" placeholder="Full name of customer" />
+      </div>
+      <div class="form-group">
+        <label>Due Date *</label>
+        <input type="date" id="act-duedate" />
+      </div>
+      <div class="form-group">
+        <label>Payment Status</label>
+        <select id="act-status">
+          <option value="🔴 UNPAID">🔴 UNPAID</option>
+          <option value="🟡 PART PAYMENT">🟡 PART PAYMENT</option>
+          <option value="🟢 PAID">🟢 PAID</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="spinner" id="act-spinner">⏳ Recording transaction...</div>
+    <button class="submit-btn" id="act-submit" onclick="submitActivity()">
+      ⚡ Record Transaction
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  PAYMENT COLLECTION                       -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen" id="screen-payment">
+    <div class="form-header">
+      <button class="back-btn" onclick="showScreen('screen-home')">← Back</button>
+      <h2>💳 Collect Payment</h2>
+    </div>
+    <div class="info-card">
+      🔵 Select transaction — customer details fill automatically
+    </div>
+
+    <div class="form-group">
+      <label>Select Unpaid Transaction *</label>
+      <select id="pay-txn" onchange="fillPaymentDetails()">
+        <option value="">-- Select Transaction --</option>
+      </select>
+    </div>
+
+    <div class="pay-card" id="pay-details">
+      <div class="pay-grid">
+        <div>
+          <div class="pay-field-label">Customer</div>
+          <div class="pay-field-value" id="pay-customer"></div>
+        </div>
+        <div>
+          <div class="pay-field-label">Product</div>
+          <div class="pay-field-value" id="pay-product"></div>
+        </div>
+        <div>
+          <div class="pay-field-label">Due Date</div>
+          <div class="pay-field-value red" id="pay-due"></div>
+        </div>
+        <div>
+          <div class="pay-field-label">Amount Owed</div>
+          <div class="pay-field-value red" id="pay-owed"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Amount Being Paid (₦) *</label>
+      <input type="number" id="pay-amount"
+             placeholder="Enter amount received"
+             min="1" oninput="calcPaymentBalance()" />
+    </div>
+
+    <div class="balance-box" id="pay-balance-card">
+      <div class="bal-label">BALANCE AFTER PAYMENT</div>
+      <div class="bal-value" id="pay-balance">₦0</div>
+      <div class="bal-sub"   id="pay-status-preview"></div>
+    </div>
+
+    <div class="spinner" id="pay-spinner">⏳ Recording payment...</div>
+    <button class="submit-btn" id="pay-submit" onclick="submitPayment()">
+      💳 Record Payment
+    </button>
+  </div>
+
+  <script>
+/* Preview-only data adapter: original Solid Inventory interface is unchanged. */
+(function(){
+const products=[{id:'P001',name:'Sample Product A',unit:'PCS',category:'General'},{id:'P002',name:'Sample Product B',unit:'PCS',category:'General'}];
+const unpaid=[{txnNumber:'TX-001',customerName:'Sample Customer',productName:'Sample Product A',amountOwed:25000,dueDate:'2026-11-30'}];
+const dashboard={cashSales:180000,creditSales:75000,totalRevenue:255000,cogs:150000,grossProfit:105000,grossProfitMargin:105000/255000,openingStockValue:450000,newStockReceived:80000,closingStockValue:380000,changeInInventory:-70000,unitsSold:35,productsTracked:2,outstandingReceivables:25000,totalCurrentAssets:405000,netWorkingCapital:30000};
+const api={withSuccessHandler(fn){this.ok=fn;return this},withFailureHandler(fn){this.fail=fn;return this},handleRequest(action,data){let result;if(action==='getProducts')result={status:'success',products};else if(action==='getUnpaidTransactions')result={status:'success',unpaid};else if(action==='getDashboard')result={status:'success',...dashboard};else result={status:'error',message:'Preview only — saving is disabled'};setTimeout(()=>this.ok(result),60);return this}};
+window.google={script:{run:new Proxy({}, {get(_target,key){if(key==='withSuccessHandler')return fn=>{const instance=Object.create(api);return instance.withSuccessHandler(fn)};return undefined}})}};
+})();
+</script>
+<script>
+    // ── GLOBAL STATE ──────────────────────────────────────────
+    let allProducts   = [];
+    let allUnpaidTxns = [];
+
+    // ── INIT ──────────────────────────────────────────────────
+    window.onload = function () {
+      const now     = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      document.getElementById('headerDate').innerText         = dateStr;
+      document.getElementById('homeDateBadge').innerText      = "📅 " + dateStr;
+      document.getElementById('openingDateBadge').innerText   = "📅 " + dateStr;
+      document.getElementById('activityDateBadge').innerText  = "📅 " + dateStr;
+
+      loadProducts();
+      loadUnpaidTransactions();
+      loadDashboard();
+    };
+
+    // ── NAVIGATION ────────────────────────────────────────────
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(function(s) {
+        s.classList.remove('active');
+      });
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);
+      if (id === 'screen-payment') loadUnpaidTransactions();
+      if (id === 'screen-home')    loadDashboard();
+    }
+
+    // ── TOAST ─────────────────────────────────────────────────
+    function showToast(msg, isError) {
+      const t      = document.getElementById('toast');
+      t.innerText  = msg;
+      t.className  = 'toast show' + (isError ? ' error' : '');
+      setTimeout(function() { t.className = 'toast'; }, 4000);
+    }
+
+    // ── LOAD PRODUCTS ─────────────────────────────────────────
+    function loadProducts() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.status === 'success') {
+            allProducts = res.products;
+            populateProductDropdowns();
+          }
+        })
+        .withFailureHandler(function(err) {
+          showToast('❌ Failed to load products', true);
+        })
+        .handleRequest('getProducts', {});
+    }
+
+    function populateProductDropdowns() {
+      ['open-product', 'act-product'].forEach(function(id) {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">-- Select Product --</option>';
+        allProducts.forEach(function(p) {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.text  = p.id + ' — ' + p.name + ' (' + p.unit + ')';
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    // ── LOAD UNPAID TRANSACTIONS ──────────────────────────────
+    function loadUnpaidTransactions() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.status === 'success') {
+            allUnpaidTxns = res.unpaid;
+            populatePaymentDropdown();
+          }
+        })
+        .withFailureHandler(function(err) {
+          showToast('❌ Failed to load transactions', true);
+        })
+        .handleRequest('getUnpaidTransactions', {});
+    }
+
+    function populatePaymentDropdown() {
+      const sel = document.getElementById('pay-txn');
+      sel.innerHTML = '<option value="">-- Select Transaction --</option>';
+      if (allUnpaidTxns.length === 0) {
+        const opt    = document.createElement('option');
+        opt.value    = '';
+        opt.text     = '✅ No outstanding transactions';
+        opt.disabled = true;
+        sel.appendChild(opt);
+        return;
+      }
+      allUnpaidTxns.forEach(function(t) {
+        const opt = document.createElement('option');
+        opt.value = t.txnNumber;
+        opt.text  = t.txnNumber + ' | ' + t.customerName +
+                    ' | ₦' + Number(t.amountOwed).toLocaleString();
+        sel.appendChild(opt);
+      });
+    }
+
+    // ── LOAD DASHBOARD FROM SHEET ─────────────────────────────
+    function loadDashboard() {
+      document.getElementById('dash-loading').classList.add('show');
+      document.getElementById('dash-content').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('dash-loading').classList.remove('show');
+          document.getElementById('dash-content').style.display = 'block';
+
+          if (res.status === 'success') {
+            // Revenue section
+            document.getElementById('d-cash').innerText =
+              '₦' + Number(res.cashSales).toLocaleString();
+            document.getElementById('d-credit').innerText =
+              '₦' + Number(res.creditSales).toLocaleString();
+            document.getElementById('d-revenue').innerText =
+              '₦' + Number(res.totalRevenue).toLocaleString();
+            document.getElementById('d-profit').innerText =
+              '₦' + Number(res.grossProfit).toLocaleString();
+            document.getElementById('d-cogs').innerText =
+              '₦' + Number(res.cogs).toLocaleString();
+            document.getElementById('d-margin').innerText =
+              (Number(res.grossProfitMargin) * 100).toFixed(1) + '%';
+
+            // Inventory section
+            document.getElementById('d-opening').innerText =
+              '₦' + Number(res.openingStockValue).toLocaleString();
+            document.getElementById('d-closing').innerText =
+              '₦' + Number(res.closingStockValue).toLocaleString();
+            document.getElementById('d-change').innerText =
+              '₦' + Number(res.changeInInventory).toLocaleString();
+            document.getElementById('d-units').innerText =
+              Number(res.unitsSold).toLocaleString();
+
+            // Working capital section
+            document.getElementById('d-receivables').innerText =
+              '₦' + Number(res.outstandingReceivables).toLocaleString();
+            document.getElementById('d-assets').innerText =
+              '₦' + Number(res.totalCurrentAssets).toLocaleString();
+            document.getElementById('d-wc').innerText =
+              '₦' + Number(res.netWorkingCapital).toLocaleString();
+            document.getElementById('d-products').innerText =
+              Number(res.productsTracked).toLocaleString();
+          } else {
+            showToast('❌ Dashboard error: ' + res.message, true);
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('dash-loading').classList.remove('show');
+          showToast('❌ Failed to load dashboard', true);
+        })
+        .handleRequest('getDashboard', {});
+    }
+
+    // ── TRANSACTION TYPE TOGGLE ───────────────────────────────
+    function handleTransactionType() {
+      const type = document.getElementById('act-type').value;
+      const sec  = document.getElementById('credit-section');
+      type === 'Credit Sales'
+        ? sec.classList.add('visible')
+        : sec.classList.remove('visible');
+    }
+
+    // ── PAYMENT — FILL DETAILS ────────────────────────────────
+    function fillPaymentDetails() {
+      const txnNo = document.getElementById('pay-txn').value;
+      const txn   = allUnpaidTxns.find(function(t) {
+        return t.txnNumber === txnNo;
+      });
+      if (!txn) return;
+
+      document.getElementById('pay-details').classList.add('visible');
+      document.getElementById('pay-customer').innerText =
+        txn.customerName || 'N/A';
+      document.getElementById('pay-product').innerText =
+        txn.productName  || 'N/A';
+      document.getElementById('pay-due').innerText =
+        txn.dueDate      || 'No due date';
+      document.getElementById('pay-owed').innerText =
+        '₦' + Number(txn.amountOwed).toLocaleString();
+
+      document.getElementById('pay-balance-card').style.display = 'none';
+      document.getElementById('pay-amount').value = '';
+    }
+
+    function calcPaymentBalance() {
+      const txnNo = document.getElementById('pay-txn').value;
+      const txn   = allUnpaidTxns.find(function(t) {
+        return t.txnNumber === txnNo;
+      });
+      if (!txn) return;
+
+      const paid    = Number(document.getElementById('pay-amount').value) || 0;
+      const balance = Math.max(Number(txn.amountOwed) - paid, 0);
+
+      document.getElementById('pay-balance-card').style.display = 'block';
+      document.getElementById('pay-balance').innerText =
+        '₦' + balance.toLocaleString();
+      document.getElementById('pay-status-preview').innerText =
+        balance === 0 ? '🟢 Will be marked PAID' : '🔴 Will remain UNPAID';
+    }
+
+    // ── SUBMIT PRODUCT ────────────────────────────────────────
+    function submitProduct() {
+      const name     = document.getElementById('prod-name').value.trim();
+      const category = document.getElementById('prod-category').value;
+      const unit     = document.getElementById('prod-unit').value;
+      const cost     = document.getElementById('prod-cost').value;
+      const selling  = document.getElementById('prod-selling').value;
+
+      if (!name || !category || !unit || !cost || !selling) {
+        showToast('❌ Please fill all required fields', true); return;
+      }
+
+      setLoading('prod', true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('prod', false);
+          if (res.status === 'success') {
+            showToast(res.message + ' ID: ' + res.id);
+            resetForm('prod');
+            loadProducts();
+          } else { showToast(res.message, true); }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('prod', false);
+          showToast('❌ ' + err.message, true);
+        })
+        .handleRequest('addProduct', {
+          productName  : name,
+          category     : category,
+          unit         : unit,
+          costPrice    : Number(cost),
+          sellingPrice : Number(selling)
+        });
+    }
+
+    // ── SUBMIT OPENING STOCK ──────────────────────────────────
+    function submitOpeningStock() {
+      const productId  = document.getElementById('open-product').value;
+      const openingQty = document.getElementById('open-qty').value;
+
+      if (!productId || openingQty === '') {
+        showToast('❌ Please select a product and enter opening stock', true);
+        return;
+      }
+
+      setLoading('open', true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('open', false);
+          if (res.status === 'success') {
+            showToast('✅ Opening stock recorded!');
+            resetForm('open');
+          } else { showToast(res.message, true); }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('open', false);
+          showToast('❌ ' + err.message, true);
+        })
+        .handleRequest('addOpeningStock', {
+          productId   : productId,
+          openingQty  : Number(openingQty),
+          receivedQty : Number(document.getElementById('open-received').value) || 0
+        });
+    }
+
+    // ── SUBMIT ACTIVITY ───────────────────────────────────────
+    function submitActivity() {
+      const type      = document.getElementById('act-type').value;
+      const productId = document.getElementById('act-product').value;
+      const qty       = document.getElementById('act-qty').value;
+
+      if (!type || !productId || !qty) {
+        showToast('❌ Please fill all required fields', true); return;
+      }
+
+      if (type === 'Credit Sales') {
+        const customer = document.getElementById('act-customer').value.trim();
+        const dueDate  = document.getElementById('act-duedate').value;
+        if (!customer || !dueDate) {
+          showToast('❌ Please fill Customer Name and Due Date', true); return;
+        }
+      }
+
+      setLoading('act', true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('act', false);
+          if (res.status === 'success') {
+            showToast('✅ ' + res.transaction + ' recorded!');
+            resetForm('act');
+            if (type === 'Credit Sales') loadUnpaidTransactions();
+          } else { showToast(res.message, true); }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('act', false);
+          showToast('❌ ' + err.message, true);
+        })
+        .handleRequest('addTransaction', {
+          transactionType : type,
+          productId       : productId,
+          qty             : Number(qty),
+          customerName    : document.getElementById('act-customer').value.trim(),
+          dueDate         : document.getElementById('act-duedate').value,
+          paymentStatus   : document.getElementById('act-status').value
+        });
+    }
+
+    // ── SUBMIT PAYMENT ────────────────────────────────────────
+    function submitPayment() {
+      const txnNumber  = document.getElementById('pay-txn').value;
+      const amountPaid = document.getElementById('pay-amount').value;
+
+      if (!txnNumber || !amountPaid) {
+        showToast('❌ Please select a transaction and enter amount', true); return;
+      }
+
+      setLoading('pay', true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading('pay', false);
+          if (res.status === 'success') {
+            showToast(res.message);
+            resetForm('pay');
+            loadUnpaidTransactions();
+            loadDashboard();
+          } else { showToast(res.message, true); }
+        })
+        .withFailureHandler(function(err) {
+          setLoading('pay', false);
+          showToast('❌ ' + err.message, true);
+        })
+        .handleRequest('recordPayment', {
+          txnNumber  : txnNumber,
+          amountPaid : Number(amountPaid)
+        });
+    }
+
+    // ── HELPERS ───────────────────────────────────────────────
+    function setLoading(prefix, isLoading) {
+      document.getElementById(prefix + '-spinner')
+              .classList.toggle('show', isLoading);
+      document.getElementById(prefix + '-submit').disabled = isLoading;
+    }
+
+    function resetForm(prefix) {
+      const fields = {
+        prod : ['prod-name','prod-category','prod-unit',
+                'prod-cost','prod-selling'],
+        open : ['open-product','open-qty','open-received'],
+        act  : ['act-type','act-product','act-qty',
+                'act-customer','act-duedate','act-status'],
+        pay  : ['pay-txn','pay-amount']
+      };
+      fields[prefix].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      if (prefix === 'act') {
+        document.getElementById('credit-section').classList.remove('visible');
+      }
+      if (prefix === 'pay') {
+        document.getElementById('pay-details').classList.remove('visible');
+        document.getElementById('pay-balance-card').style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
